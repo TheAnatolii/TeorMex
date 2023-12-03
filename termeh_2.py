@@ -88,5 +88,5 @@ def animate(i):
     return line, ball, slider, spring_EA, spring_DA, point_d, point_o, point_e, text_A, text_B
 
 
-ani = FuncAnimation(fig, animate, frames=len(t_values), blit=True, interval=15)
+ani = FuncAnimation(fig, animate, frames=len(t_values), blit=True)
 plt.show()

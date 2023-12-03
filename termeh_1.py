@@ -21,11 +21,11 @@ y = r * sp.sin(fi)
 
 xC = R*Omega*t
 
-Vx = sp.diff(x, t)
-Vy = sp.diff(y, t)
+Vx = sp.diff(x, t) * 0.5
+Vy = sp.diff(y, t) * 0.5
 
-a_x = sp.diff(Vx, t)
-a_y = sp.diff(Vy, t)
+a_x = sp.diff(Vx, t) * 0.25
+a_y = sp.diff(Vy, t) * 0.25
 
 
 T = np.linspace(0, 10, 1000)
@@ -52,7 +52,7 @@ fig = plt.figure()
 
 ax1 = fig.add_subplot(1, 1, 1)
 ax1.axis('equal')
-ax1.set(xlim=[-5, 5], ylim=[-5, 5])
+ax1.set(xlim=[-10, 10], ylim=[-10, 10])
 
 ax1.plot(X, Y)
 ax1.plot([X.min(), X.max()], [0, 0], 'black')
