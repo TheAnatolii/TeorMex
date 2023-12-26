@@ -55,7 +55,7 @@ ax1.axis('equal')
 ax1.set(xlim=[-10, 10], ylim=[-10, 10])
 
 ax1.plot(X, Y)
-ax1.plot([X.min(), X.max()], [0, 0], 'black')
+# ax1.plot([X.min(), X.max()], [0, 0], 'black')
 
 Phi = np.linspace(0, 2*math.pi, 100)
 #Circ, = ax1.plot(XC[0]+R*np.cos(Phi), YC+R*np.sin(Phi), 'g')

@@ -1,130 +1,246 @@
-import numpy as np
 import sympy as sp
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from matplotlib.gridspec import GridSpec
+from matplotlib.patches import Rectangle
+from matplotlib.patches import Circle
+import math
+from scipy.integrate import odeint
 
-# Параметры системы
-a = 1.0  # расстояние между центрами пружин D и E
-l = 2.0  # длина стержня AB
-g = 9.81  # ускорение свободного падения
-m2 = 1  # масса груза
-slider_height = 1.4
-slider_y = 0  # высота ползуна
-point_D = [a, 0]
-point_O = [0, 0]
-point_E = [-a, 0]
-fi0 = np.pi / 4  # начальный угол от вертикали
 
-# Время
-t_max = 5.0
-dt = 0.08
-t_values = np.arange(0, t_max, dt)
+def formY(y, t, fv, fw):
+    y1, y2, y3, y4 = y
+    dydt = [y3, y4, fv(y1, y2, y3, y4), fw(y1, y2, y3, y4)]
+    return dydt
 
-# Создаем GridSpec с 4 строками и одним столбцом
+
+Frames = 500
+Interval_Frame = 0
+Repeat_Delay_Anim = 0
+t = sp.Symbol("t")  # t is a symbol variable
+x = sp.Function('x')(t)  # x(t)
+fi = sp.Function('fi')(t)  # fi(t)
+v = sp.Function('v')(t)  # dx/dt, v(t)
+w = sp.Function('w')(t)  # dfi/dt, w(t), omega(t)
+a_full = sp.Function('a_full')(t)  # dx/dt, v(t)
+e = sp.Function('e')(t)  # dfi/dt, w(t), omega(t)
+
+
+# Initializing
+width = 2  # width of the rectangle
+length = 5  # length of the rectangle
+a = 5  # distance between spring and rectanlge (DO or OE)
+# circle_radius = 0.2  # radius of the circle
+# m1 = 1  # mass of the rectangle
+# m2 = 1  # mass of the circle
+# g = 9.8  # const
+# l = 2  # length of stick
+# k = 5  # spring stiffness coefficient
+# y0 = [0, sp.rad(45), 0, 0]  # x(0), fi(0), v(0), w(0)
+
+
+# circle_radius = 0.2  # radius of the circle
+# m1 = 1  # mass of the rectangle
+# m2 = 1  # mass of the circle
+# g = 9.8  # const
+# l = 2  # length of stick
+# k = 51  # spring stiffness coefficient
+# y0 = [0, sp.rad(45), 0, 0]  # x(0), fi(0), v(0), w(0)
+
+
+circle_radius = 0.8
+m1 = 2  # mass of the rectangle
+m2 = 2  # mass of the circle
+g = 9.8  # const
+l = 5  # length of stick
+k = 100  # spring stiffness coefficient
+y0 = [0, sp.rad(180), 0, 0]
+
+
+# circle_radius = 0.8
+# m1 = 0.1  # mass of the rectangle
+# m2 = 0.1  # mass of the circle
+# g = 9.8  # const
+# l = 2  # length of stick
+# k = 20  # spring stiffness coefficient
+# y0 = [0, sp.rad(180), 0, 0]
+
+
+# Caluclating Lagrange equations
+# Kinetic energy of the rectangle
+# Ekin1 = (m1 * v * v) / 2
+# # Squared velocity of the circle's center of mass
+# Vsquared = v * v + w * w * l * l - 2 * v * w * l * sp.sin(fi)
+# # Kinetic energy of the circle
+# Ekin2 = m2 * Vsquared / 2
+# # Kinetic energy of system
+# Ekin = Ekin1 + Ekin2
+# # Potential energy
+# Spring_delta_x = sp.sqrt(a * a + x * x) - a  # delta_x^2
+# # We have two springs so Esprings = 2 * (k*delta_x^2/2) = k*delta_x^2
+# Esprings = k * Spring_delta_x * Spring_delta_x
+# Epot = - m1 * g * x - m2 * g * (x + l * sp.cos(fi)) + Esprings
+# # generalized forces
+# Qx = -sp.diff(Epot, x)
+# Qfi = -sp.diff(Epot, fi)
+#
+# # Lagrange function
+# Lagr = Ekin - Epot
+# ur1 = sp.diff(sp.diff(Lagr, v), t) - sp.diff(Lagr, x)
+# ur2 = sp.diff(sp.diff(Lagr, w), t) - sp.diff(Lagr, fi)
+# print(ur1)
+# print()
+# print(ur2 / (l * m2))
+
+a11 = m1 + m2
+a12 = -m2 * l * sp.sin(fi)
+a21 = sp.sin(fi)
+a22 = -l
+b1 = -2*k * x * (1 - (a*a / sp.sqrt(x*x + a*a))) + (m1+m2)*g - w*w*sp.cos(fi) * m2 * l
+b2 = g * sp.sin(fi)
+
+detA = a11 * a22 - a12 * a21
+detA1 = b1 * a22 - b2 * a21
+detA2 = a11 * b2 - b1 * a21
+dvdt = detA1 / detA
+dwdt = detA2 / detA
+# constructing the system of differential equations
+T = np.linspace(0, 50, Frames)
+# lambdify translates function from sympy to numpy and then form arrays faster then by using subs
+fv = sp.lambdify([x, fi, v, w], dvdt, "numpy")
+fw = sp.lambdify([x, fi, v, w], dwdt, "numpy")
+sol = odeint(formY, y0, T, args=(fv, fw))
+# sol - our solution
+# sol[:,0] - x
+# sol[:,1] - fi
+# sol[:,2] - v (dx/dt)
+# sol[:,3] - w (dfi/dt)
+
+fdv = sp.lambdify([v, w, a_full, e], dvdt, "numpy")
+fdw = sp.lambdify([v, w, a_full, e], dwdt, "numpy")
+sol_ra = odeint(formY, y0, T, args=(fv, fw))
+# sol_ra - our solution
+# sol_ra[:,0] - v
+# sol_ra[:,1] - w
+# sol_ra[:,2] - a_full
+# sol_ra[:,3] - e
+
+ra = [0] * len(sol[:, 0])
+for i in range(len(ra)):
+    ra[i] = m2 * l * (sol_ra[:, 3][i] * np.cos(sol[:, 1][i]) - sol_ra[:, 1][i] ** 2 * np.sin(sol[:, 1][i]))
+
+
+# point A (center of the rectangle):
+ax = sp.lambdify(x, 0)
+ay = sp.lambdify(x, x)
+AX = ax(sol[:, 0])
+AY = -ay(sol[:, 0])
+
+# point B (center of the circle):
+bx = sp.lambdify(fi, l * sp.sin(fi))
+by = sp.lambdify([x, fi], + l * sp.cos(fi) + x)
+BX = bx(sol[:, 1])
+BY = -by(sol[:, 0], sol[:, 1])
+
+# start plotting
 fig = plt.figure()
-gs = GridSpec(5, 1, figure=fig)
+ax0 = fig.add_subplot(1, 2, 1)
+ax0.axis("equal")
+# ax0.set_xlim(-10, 10)
+# ax0.set_ylim(-38, 8.7)
 
-# Создание анимации
-ax = fig.add_subplot(gs[:2, :])
-line, = ax.plot([], [], 'co-')  # Стержень AB
-ball, = ax.plot([], [], 'bo')  # Груз B
-slider, = ax.plot([], [], 'go')  # Ползун A
-spring_DA, = ax.plot([], [], 'g', lw=2)  # Линия, представляющая пружину DA
-spring_EA, = ax.plot([], [], 'g', lw=2)  # Линия, представляющая пружину EA
-point_d, = ax.plot([], [], 'co', markersize=5)  # Точка D
-point_o, = ax.plot([], [], 'mo', markersize=5)  # Точка O
-point_e, = ax.plot([], [], 'co', markersize=5)  # Точка E
-ax.set_xlim(-5, 5)
-ax.set_ylim(-3, 1)
-spring_DA_x = [point_D[0], 0]  # Координаты пружины DA
-spring_DA_y = [point_D[1], slider_y]
-spring_EA_x = [point_E[0], 0]  # Координаты пружины EA
-spring_EA_y = [point_E[1], slider_y]
-ax.axvline(0, linestyle='--', color='k')  # пунктиры
-ax.axhline(point_D[1], linestyle='--', color='k')
+# constant arrays
+L1X = [-width / 2, -width / 2]
+L2X = [width / 2, width / 2]
+LY = [min(AY) - length, max(AY) + length]
 
-# Добавим подписи точек
-ax.text(point_D[0], point_D[1], 'D', ha='right', va='bottom')
-ax.text(point_O[0], point_O[1], 'O', ha='right', va='bottom')
-ax.text(point_E[0], point_E[1], 'E', ha='right', va='bottom')
+# plotting environment
+ax0.plot(0, 0, marker=".", color="red")  # красная точка
+ax0.plot(L1X, LY, color="grey")  # left wall
+ax0.plot(L2X, LY, color="grey")  # right wall
+sl, = ax0.plot([-a, -length / 2], [0, AY[0] + width / 2],
+               color="brown")  # left spring (rope)
+sr, = ax0.plot([a, length / 2], [0, AY[0] + width / 2],
+               color="brown")  # right spring (rope)
+ax0.plot(-a, 0, marker=".", color="black")  # left joint
+ax0.plot(a, 0, marker=".", color="black")  # right joint
+ax0.axvline(0, linestyle='--', color='k')  # пунктиры
+ax0.axhline(0, linestyle='--', color='k')
+rect = plt.Rectangle((-width / 2, AY[0]), width,
+                     length, color="black")  # rectangle
+circ = plt.Circle((BX[0], BY[0]), circle_radius, color="grey")  # circle
+# plotting radius vector of B
+R_vector, = ax0.plot([0, BX[0]], [0, BY[0]], color="grey")
+# adding statistics
+ax2 = fig.add_subplot(4, 2, 2)
+ax2.plot(T, sol[:, 0])
+ax2.set_xlabel('t')
+ax2.set_ylabel('x')
 
-# Создадим текст для букв A и B
-text_A = ax.text(0, slider_y, 'A', ha='right', va='bottom')
-text_B = ax.text(l * np.sin(fi0), slider_y - l * np.cos(fi0), 'B', ha='right', va='bottom')
+ax3 = fig.add_subplot(4, 2, 4)
+ax3.plot(T, sol[:, 1])
+ax3.set_xlabel('t')
+ax3.set_ylabel('fi')
 
-# Добавляем графики для x(t), fi(t) и Ra(t)
-ax_x = fig.add_subplot(gs[2, :])
-line_x, = ax_x.plot([], [], 'r-', label='x(t)')
-ax_x.set_ylabel('x(t)')
-ax_x.set_xlim(0, t_max)
-ax_x.set_ylim(-1, 1)
+ax4 = fig.add_subplot(4, 2, 6)
+ax4.plot(T, ra)
+ax4.set_xlabel('t')
+ax4.set_ylabel('R_a')
 
-ax_fi = fig.add_subplot(gs[3, :])
-line_fi, = ax_fi.plot([], [], 'g-', label='fi(t)')
-ax_fi.set_ylabel('fi(t)')
-ax_fi.set_xlim(0, t_max)
-ax_fi.set_ylim(-60, 60)
+plt.subplots_adjust(wspace=0.3, hspace=0.7)
 
-ax_Ra = fig.add_subplot(gs[4, :])
-line_Ra, = ax_Ra.plot([], [], 'b-', label='Ra(t)')
-ax_Ra.set_ylabel('Ra(t)')
-ax_Ra.set_xlim(0, t_max)
-ax_Ra.set_ylim(-10, 10)
-
-def animate(i):
-    t = i * dt
-
-    # Изменяем вертикальное положение основания стержня(слайдер)
-    slider_y = -l * np.cos(fi0 * np.cos(np.sqrt(g / l) * t)) + slider_height #x(t)
-
-    # Обновляем угол маятника используя уравнение маятника(грузик)
-    fi = fi0 * np.cos(np.sqrt(g / l) * t)
-
-    x_values = [0, l * np.sin(fi)]
-    y_values = [slider_y, slider_y - l * np.cos(fi)]
-    line.set_data(x_values, y_values)
-
-    # Обновляем положение груза B
-    x_ball = l * np.sin(fi)
-    y_ball = slider_y - l * np.cos(fi)
-    ball.set_data(x_ball, y_ball)
-
-    # Обновляем положение ползуна A
-    slider.set_data(0, slider_y)
-
-    # Обновляем положения точек D, O и E
-    point_d.set_data(point_D[0], point_D[1])
-    point_o.set_data(point_O[0], point_O[1])
-    point_e.set_data(point_E[0], point_E[1])
-
-    # Обновляем координаты пружин
-    spring_DA_x = [point_D[0], 0]
-    spring_DA_y = [point_D[1], slider_y]
-    spring_DA.set_data(spring_DA_x, spring_DA_y)
-
-    spring_EA_x = [point_E[0], 0]
-    spring_EA_y = [point_E[1], slider_y]
-    spring_EA.set_data(spring_EA_x, spring_EA_y)
-
-    # Обновляем координаты букв A и B
-    text_A.set_position((0, slider_y))
-    text_B.set_position((x_ball, y_ball))
-
-    # Расчет производных угла по времени
-    d_fi_dt = -fi0 * np.sqrt(g / l) * np.sin(np.sqrt(g / l) * t_values[:i])  # Первая производная fi(t) по t
-    d2_fi_dt2 = (-g * fi0 * np.cos(np.sqrt(g / l) * t_values[:i])) / l  # Вторая производная fi(t) по t
-
-    # Расчет x(t), fi(t) и Ra(t)
-    xt = -l * np.cos(fi0 * np.cos(np.sqrt(g / l) * t_values[:i])) + slider_height
-    fit = 180 * fi0 * np.cos(np.sqrt(g / l) * t_values[:i]) / np.pi
-    Rat = m2 * l * (d2_fi_dt2 * np.cos(fit)) - (d_fi_dt**2) * np.sin(fit)
-
-    line_x.set_data(t_values[:i], xt)
-    line_fi.set_data(t_values[:i], fit)
-    line_Ra.set_data(t_values[:i], Rat)
-    return line, ball, slider, spring_EA, spring_DA, point_d, point_o, point_e, text_A, text_B, line_x, line_fi, line_Ra
+# Добавляем подписи к точкам, грузику и ползунку
+ax0.text(-a - 1, 0, 'D', ha='right', va='bottom')
+ax0.text(a + 1, 0, 'E', ha='left', va='bottom')
+ax0.text(0, 0, 'O', ha='right', va='bottom')
+text_A = ax0.text(0, AY[0], 'A', ha='right', va='bottom')
+text_B = ax0.text(BX[0], BY[0], 'B', ha='right', va='bottom')
 
 
-ani = FuncAnimation(fig, animate, frames=len(t_values), blit=True, interval=50)
+# function for initializing the positions
+def init():
+    rect.set_y(-length / 2)
+    ax0.add_patch(rect)
+    circ.center = (0, 0)
+    ax0.add_patch(circ)
+    return rect, circ
+
+def create_zigzag(start, end, num_segments=12, amplitude=0.1):
+    x_vals = np.linspace(start[0], end[0], num_segments)
+    y_vals = np.linspace(start[1], end[1], num_segments)
+    dist = np.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+    amp_factor = amplitude * (2 + 0.5 * dist)  # Изменение амплитуды пружины в зависимости от расстояния
+    for i in range(1, num_segments, 2):
+        y_vals[i] += amp_factor
+    return x_vals, y_vals
+
+# function for recounting the positions
+def anima(i):
+    rect.set_y(AY[i] - length / 2)
+    spring_left_x, spring_left_y = create_zigzag((-a, 0), (-width / 2, AY[i]), num_segments=12, amplitude=0.1)
+    spring_right_x, spring_right_y = create_zigzag((a, 0), (width / 2, AY[i]), num_segments=12, amplitude=0.1)
+    sl.set_data(spring_left_x, spring_left_y)
+    sr.set_data(spring_right_x, spring_right_y)
+    R_vector.set_data([0, BX[i]], [AY[i], BY[i]])
+    circ.center = (BX[i], BY[i])
+
+    # Обновляем положения текстовых меток для ползунка и грузика
+    text_A.set_position((-1, AY[i]))  # Ползунок A
+    text_B.set_position((BX[i], BY[i] + 0.5))  # Грузик B
+
+    # Создание вертикальных стенок
+    left_wall_x = [-a-0.4, -a-0.4]
+    left_wall_y = [-1, 1]
+    right_wall_x = [a+0.5, a+0.5]
+    right_wall_y = [-1, 1]
+
+    left_wall, = ax0.plot(left_wall_x, left_wall_y, color='grey')
+    right_wall, = ax0.plot(right_wall_x, right_wall_y, color='grey')
+
+    return sl, sr, rect, left_wall, right_wall, R_vector, circ,
+
+
+# animating function
+anim = FuncAnimation(fig, anima, init_func=init, frames=Frames, #interval=40,
+                     blit=False, repeat=True, repeat_delay=Repeat_Delay_Anim)
 plt.show()
